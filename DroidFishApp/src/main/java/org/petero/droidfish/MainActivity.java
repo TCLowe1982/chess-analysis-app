@@ -390,11 +390,43 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void highlightSquaresForStrategy(String strategy) {
-        // This would highlight key squares based on the selected strategy
-        // In a complete implementation, you would use DroidFish's engine analysis
+        // Clear any previous highlights
+        for (int row = 0; row < 8; row++) {
+            for (int col = 0; col < 8; col++) {
+                highlightSquare(row, col, false);
+            }
+        }
         
-        // For now, just a placeholder method
-        // You could add colored overlays to specific squares on the board
+        // This would be more sophisticated with actual engine analysis
+        // For now, we'll use simple heuristics for each strategy
+        switch (strategy) {
+            case "attack":
+                // Highlight opponent's pieces that can be captured
+                for (int row = 0; row < 8; row++) {
+                    for (int col = 0; col < 8; col++) {
+                        int square = Position.getSquare(col, 7-row);
+                        int piece = position.getPiece(square);
+                        
+                        // If it's an opponent's piece
+                        if (piece != Piece.EMPTY && Piece.isBlack(piece) != position.whiteMove) {
+                            // Check if it can be captured
+                            if (canBeCaptured(row, col)) {
+                                highlightSquare(row, col, true);
+                            }
+                        }
+                    }
+                }
+                break;
+                
+            // Similar implementations for other strategies
+            // ...
+        }
+    }
+
+    private boolean canBeCaptured(int row, int col) {
+        // This would use Position's methods to check if a piece can be captured
+        // For now, return a placeholder value
+        return (row + col) % 3 == 0; // Arbitrary pattern for demo
     }
 
     private int getPieceDrawableId(int piece) {
@@ -498,6 +530,27 @@ public class MainActivity extends AppCompatActivity {
                 break;
             }
         }
+    }
+
+    private void saveGameState() {
+        SharedPreferences prefs = getSharedPreferences("ChessAnalyzerPrefs", MODE_PRIVATE);
+        SharedPreferences.Editor editor = prefs.edit();
+        
+        // Save current position as FEN
+        if (position != null) {
+            editor.putString("currentPosition", position.toFEN());
+        }
+        
+        // Save current strategy
+        editor.putString("currentStrategy", currentStrategy);
+        
+        editor.apply();
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        saveGameState();
     }
 
     // You may need additional methods based on how you integrate with DroidFish
