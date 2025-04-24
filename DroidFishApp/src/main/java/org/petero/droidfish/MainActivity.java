@@ -259,15 +259,42 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void addPiece(int row, int col, int pieceDrawableId) {
-        // This is a simplified example - you might need to adapt this to work with DroidFish's existing code
-        
         // Find the square at the specified position
         String tag = row + "," + col;
         for (int i = 0; i < chessBoard.getChildCount(); i++) {
             View square = chessBoard.getChildAt(i);
             if (tag.equals(square.getTag())) {
-                // Create piece view (e.g., ImageView)
-                // Add piece to the square
+                // Create a FrameLayout to hold both the square and the piece
+                FrameLayout container = new FrameLayout(this);
+                int squareSize = square.getLayoutParams().width;
+                GridLayout.LayoutParams squareParams = (GridLayout.LayoutParams) square.getLayoutParams();
+                
+                // Create piece ImageView
+                ImageView pieceView = new ImageView(this);
+                pieceView.setImageResource(pieceDrawableId);
+                pieceView.setLayoutParams(new FrameLayout.LayoutParams(
+                        FrameLayout.LayoutParams.MATCH_PARENT,
+                        FrameLayout.LayoutParams.MATCH_PARENT));
+                
+                // Replace the square with the container
+                chessBoard.removeView(square);
+                container.addView(square);
+                container.addView(pieceView);
+                
+                // Set the same layout params for the container
+                container.setLayoutParams(squareParams);
+                container.setTag(tag);
+                
+                // Add click listener for piece movement
+                container.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        handleSquareClick(row, col);
+                    }
+                });
+                
+                chessBoard.addView(container);
+                pieceViews.add(pieceView);
                 break;
             }
         }
