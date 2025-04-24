@@ -233,19 +233,29 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void setupInitialPieces() {
-        // This would ideally leverage DroidFish's Position class
-        // For simplicity, we'll just display placeholder pieces
+        // Initialize Position with starting position
+        position = new Position();
+        position.fromFEN(STARTING_FEN);
         
-        // You would typically create piece views (ImageViews) and add them to the board
-        // Example:
-        // addPiece(0, 0, R.drawable.black_rook);
-        // addPiece(0, 1, R.drawable.black_knight);
-        // etc.
+        // Clear any existing piece views
+        for (ImageView pieceView : pieceViews) {
+            if (pieceView.getParent() != null) {
+                ((FrameLayout)pieceView.getParent()).removeView(pieceView);
+            }
+        }
+        pieceViews.clear();
         
-        // For a complete implementation, you should integrate with DroidFish's Position class
-        // and ChessBoard view if available
-        
-        // You can also consider using the DroidFish engine for proper chess logic
+        // Place pieces on the board according to the position
+        for (int row = 0; row < 8; row++) {
+            for (int col = 0; col < 8; col++) {
+                int square = Position.getSquare(col, 7-row); // Convert to internal position format
+                int piece = position.getPiece(square);
+                
+                if (piece != Piece.EMPTY) {
+                    addPiece(row, col, getPieceDrawableId(piece));
+                }
+            }
+        }
     }
 
     private void addPiece(int row, int col, int pieceDrawableId) {
