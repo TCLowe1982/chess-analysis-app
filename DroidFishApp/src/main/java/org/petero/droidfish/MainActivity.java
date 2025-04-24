@@ -41,6 +41,8 @@ public class MainActivity extends AppCompatActivity {
     private Position position;
     private static final String STARTING_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
     private ArrayList<ImageView> pieceViews = new ArrayList<>();
+    private int selectedRow = -1;
+    private int selectedCol = -1;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -301,16 +303,44 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void loadGameState() {
-        // For a simple implementation, load from SharedPreferences
-        // For a more robust implementation, integrate with DroidFish's game state management
+        SharedPreferences prefs = getSharedPreferences("ChessAnalyzerPrefs", MODE_PRIVATE);
+        String savedFen = prefs.getString("currentPosition", "");
         
-        // Example using SharedPreferences:
-        // SharedPreferences prefs = getSharedPreferences("ChessAnalyzerPrefs", MODE_PRIVATE);
-        // String savedFen = prefs.getString("currentPosition", "");
-        // if (!TextUtils.isEmpty(savedFen)) {
-        //     // Load position from FEN
-        //     // Use DroidFish's Position class if available
-        // }
+        if (!TextUtils.isEmpty(savedFen)) {
+            // Initialize the position with the saved FEN
+            position = new Position();
+            position.fromFEN(savedFen);
+        } else {
+            // If no saved position, use the starting position
+            position = new Position();
+            position.fromFEN(STARTING_FEN);
+        }
+        
+        // Update the board display
+        updateBoardFromPosition();
+        
+        // Also load the current strategy if available
+        currentStrategy = prefs.getString("currentStrategy", "");
+        if (!TextUtils.isEmpty(currentStrategy)) {
+            applyCurrentStrategy();
+        }
+    }
+
+    private void applyCurrentStrategy() {
+        switch(currentStrategy) {
+            case "attack":
+                applyAttackStrategy();
+                break;
+            case "defense":
+                applyDefenseStrategy();
+                break;
+            case "trap":
+                applyTrapStrategy();
+                break;
+            case "counter":
+                applyCounterStrategy();
+                break;
+        }
     }
 
     private void applyAttackStrategy() {
@@ -365,6 +395,109 @@ public class MainActivity extends AppCompatActivity {
         
         // For now, just a placeholder method
         // You could add colored overlays to specific squares on the board
+    }
+
+    private int getPieceDrawableId(int piece) {
+        // Map DroidFish's piece constants to drawables
+        switch (piece) {
+            case Piece.WKING:   return R.drawable.wk;
+            case Piece.WQUEEN:  return R.drawable.wq;
+            case Piece.WROOK:   return R.drawable.wr;
+            case Piece.WBISHOP: return R.drawable.wb;
+            case Piece.WKNIGHT: return R.drawable.wn;
+            case Piece.WPAWN:   return R.drawable.wp;
+            case Piece.BKING:   return R.drawable.bk;
+            case Piece.BQUEEN:  return R.drawable.bq;
+            case Piece.BROOK:   return R.drawable.br;
+            case Piece.BBISHOP: return R.drawable.bb;
+            case Piece.BKNIGHT: return R.drawable.bn;
+            case Piece.BPAWN:   return R.drawable.bp;
+            default:            return 0; // Empty square
+        }
+    }
+
+    private void handleSquareClick(int row, int col) {
+        int square = Position.getSquare(col, 7-row);
+        int piece = position.getPiece(square);
+        
+        if (selectedRow == -1 && selectedCol == -1) {
+            // No piece selected yet, select this square if it has a piece
+            if (piece != Piece.EMPTY) {
+                selectedRow = row;
+                selectedCol = col;
+                highlightSquare(row, col, true);
+            }
+        } else {
+            // A piece is already selected, try to move it
+            int fromSquare = Position.getSquare(selectedCol, 7-selectedRow);
+            int toSquare = Position.getSquare(col, 7-row);
+            
+            // Create a move and check if it's legal
+            Move move = new Move(fromSquare, toSquare, Piece.EMPTY);
+            if (position.legalMove(move)) {
+                // Make the move
+                position.makeMove(move);
+                
+                // Update the board display
+                updateBoardFromPosition();
+                
+                // Apply current strategy after the move
+                applyCurrentStrategy();
+            }
+            
+            // Unhighlight the previously selected square
+            highlightSquare(selectedRow, selectedCol, false);
+            
+            // Reset selection
+            selectedRow = -1;
+            selectedCol = -1;
+        }
+    }
+
+    private void updateBoardFromPosition() {
+        // Clear the board
+        for (ImageView pieceView : pieceViews) {
+            if (pieceView.getParent() != null) {
+                ((FrameLayout)pieceView.getParent()).removeView(pieceView);
+            }
+        }
+        pieceViews.clear();
+        
+        // Add pieces according to the current position
+        for (int row = 0; row < 8; row++) {
+            for (int col = 0; col < 8; col++) {
+                int square = Position.getSquare(col, 7-row);
+                int piece = position.getPiece(square);
+                
+                if (piece != Piece.EMPTY) {
+                    addPiece(row, col, getPieceDrawableId(piece));
+                }
+            }
+        }
+    }
+
+    private void highlightSquare(int row, int col, boolean highlight) {
+        String tag = row + "," + col;
+        for (int i = 0; i < chessBoard.getChildCount(); i++) {
+            View view = chessBoard.getChildAt(i);
+            if (tag.equals(view.getTag())) {
+                if (view instanceof FrameLayout) {
+                    View square = ((FrameLayout) view).getChildAt(0);
+                    if (highlight) {
+                        square.setBackgroundColor(Color.rgb(255, 255, 0)); // Yellow highlight
+                    } else {
+                        // Restore original color
+                        boolean isWhiteSquare = (row + col) % 2 == 0;
+                        if (isWhiteSquare) {
+                            square.setBackgroundColor(getResources().getColor(android.R.color.white));
+                        } else {
+                            square.setBackgroundColor(getResources().getColor(android.R.color.darker_gray));
+                        }
+                    }
+                }
+                break;
+            }
+        }
     }
 
     // You may need additional methods based on how you integrate with DroidFish
